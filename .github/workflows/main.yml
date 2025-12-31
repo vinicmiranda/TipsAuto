@@ -2,7 +2,7 @@ name: TipsAuto
 
 on:
   schedule:
-    - cron: "30 22 * * *"   # roda todo dia 08:00 UTC (05:00 no Brasil)
+    - cron: "*/10 * * * *"
   workflow_dispatch:
 
 jobs:
