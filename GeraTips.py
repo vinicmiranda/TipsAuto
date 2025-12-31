@@ -5,21 +5,21 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-from io import BytesIO
 
-# =========================
-# BASE DIR (multiplataforma)
-# =========================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DATA = os.path.join(BASE_DIR, "base")
-os.makedirs(BASE_DATA, exist_ok=True)
+###################################
+# CONFIGURAÇÕES GERAIS
+###################################
 
-BASE_PAGE = "https://www.football-data.co.uk/matches_new_leagues.php"
 BASE_SITE = "https://www.football-data.co.uk/"
+BASE_PAGE = "https://www.football-data.co.uk/matches_new_leagues.php"
 
-# =========================
+BASE_DIR = os.path.join(os.getcwd(), "base")
+os.makedirs(BASE_DIR, exist_ok=True)
+
+###################################
 # TELEGRAM
-# =========================
+###################################
+
 def enviar_telegram(mensagem):
     TOKEN = os.getenv("TELEGRAM_TOKEN")
     CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -38,146 +38,280 @@ def enviar_telegram(mensagem):
     r = requests.post(url, json=payload)
     return r.status_code == 200
 
-# =========================
+###################################
 # FUNÇÕES AUXILIARES
-# =========================
+###################################
+
 def temporadas_recentes(qtd):
     hoje = datetime.today()
-    ano = hoje.year
-    mes = hoje.month
-    inicio = ano - 1 if mes < 8 else ano
+    inicio = hoje.year - 1 if hoje.month < 8 else hoje.year
+    return [(inicio - i, inicio - i + 1) for i in range(qtd)]
 
-    temporadas = []
-    for i in range(qtd):
-        a1 = inicio - i
-        a2 = a1 + 1
-        temporadas.append((a1, a2))
+###################################
+# MÉTRICAS
+###################################
 
-    return temporadas
+def calcular_gm10(time):
+    jogos = temporadas[
+        (temporadas['Mandante'] == time) |
+        (temporadas['Visitante'] == time)
+    ].sort_values(['Data','Hora'], ascending=False).head(10)
 
-# =========================
-# DOWNLOAD FIXTURES EXTRA
-# =========================
+    if jogos.empty:
+        return None
+
+    gols = (
+        jogos.loc[jogos['Mandante'] == time, 'GM'].sum() +
+        jogos.loc[jogos['Visitante'] == time, 'GS'].sum()
+    )
+    return gols / len(jogos)
+
+def calcular_gs10(time):
+    jogos = temporadas[
+        (temporadas['Mandante'] == time) |
+        (temporadas['Visitante'] == time)
+    ].sort_values(['Data','Hora'], ascending=False).head(10)
+
+    if jogos.empty:
+        return None
+
+    gols = (
+        jogos.loc[jogos['Mandante'] == time, 'GS'].sum() +
+        jogos.loc[jogos['Visitante'] == time, 'GM'].sum()
+    )
+    return gols / len(jogos)
+
+def calcular_gmht(time):
+    jogos = temporadas[
+        (temporadas['Mandante'] == time) |
+        (temporadas['Visitante'] == time)
+    ].sort_values(['Data','Hora'], ascending=False).head(10)
+
+    if jogos.empty:
+        return None
+
+    gols = (
+        jogos.loc[jogos['Mandante'] == time, 'GM1T'].sum() +
+        jogos.loc[jogos['Visitante'] == time, 'GS1T'].sum()
+    )
+    return gols / len(jogos)
+
+def calcular_gsht(time):
+    jogos = temporadas[
+        (temporadas['Mandante'] == time) |
+        (temporadas['Visitante'] == time)
+    ].sort_values(['Data','Hora'], ascending=False).head(10)
+
+    if jogos.empty:
+        return None
+
+    gols = (
+        jogos.loc[jogos['Mandante'] == time, 'GS1T'].sum() +
+        jogos.loc[jogos['Visitante'] == time, 'GM1T'].sum()
+    )
+    return gols / len(jogos)
+
+def calcular_gmc(time):
+    jogos = temporadas[
+        temporadas['Mandante'] == time
+    ].sort_values(['Data','Hora'], ascending=False).head(10)
+
+    if jogos.empty:
+        return None
+
+    return jogos['GM'].sum() / len(jogos)
+
+def calcular_gmhtc(time):
+    jogos = temporadas[
+        temporadas['Mandante'] == time
+    ].sort_values(['Data','Hora'], ascending=False).head(10)
+
+    if jogos.empty:
+        return None
+
+    return jogos['GM1T'].sum() / len(jogos)
+
+def calcular_gsf(time):
+    jogos = temporadas[
+        temporadas['Visitante'] == time
+    ].sort_values(['Data','Hora'], ascending=False).head(10)
+
+    if jogos.empty:
+        return None
+
+    return jogos['GM'].sum() / len(jogos)
+
+def calcular_gshtf(time):
+    jogos = temporadas[
+        temporadas['Visitante'] == time
+    ].sort_values(['Data','Hora'], ascending=False).head(10)
+
+    if jogos.empty:
+        return None
+
+    return jogos['GS1T'].sum() / len(jogos)
+
+###################################
+# DOWNLOADS
+###################################
+
 def baixar_jogos_extra(destino):
     print("🔄 Acessando página de fixtures...")
-    response = requests.get(BASE_PAGE)
-    response.raise_for_status()
-
-    soup = BeautifulSoup(response.text, "html.parser")
+    soup = BeautifulSoup(requests.get(BASE_PAGE).text, "html.parser")
     link = soup.find("a", href=lambda x: x and "new_league_fixtures" in x)
 
-    if not link:
-        raise Exception("Link de fixtures não encontrado")
-
     url = link["href"]
-    url = url if url.startswith("http") else BASE_SITE + url
-    print("⬇️ Baixando:", url)
+    if not url.startswith("http"):
+        url = BASE_SITE + url
 
-    arquivo = requests.get(url)
-    arquivo.raise_for_status()
+    arq = requests.get(url)
 
-    pasta = os.path.dirname(destino)
-    if pasta:
-        os.makedirs(pasta, exist_ok=True)
-
+    os.makedirs(os.path.dirname(destino), exist_ok=True)
     with open(destino, "wb") as f:
-        f.write(arquivo.content)
+        f.write(arq.content)
 
-    df = pd.read_excel(destino, engine="openpyxl")
-    df = df[['Country', 'Date', 'Time', 'Home', 'Away']]
-    df = df.rename(columns={
-        'Country': 'Div',
-        'Date': 'Data',
-        'Time': 'Hora',
-        'Home': 'Mandante',
-        'Away': 'Visitante'
-    })
-
+    df = pd.read_excel(destino)
+    df = df[['Country','Date','Time','Home','Away']]
+    df.columns = ['Div','Data','Hora','Mandante','Visitante']
     df.to_excel(destino, index=False)
-    print("✅ Fixtures extra salvos")
 
-# =========================
-# DOWNLOAD FIXTURES MAIN
-# =========================
 def baixar_jogos_main(destino):
-    page_url = "https://www.football-data.co.uk/matches.php"
-    response = requests.get(page_url)
-    response.raise_for_status()
-
-    soup = BeautifulSoup(response.text, "html.parser")
-    link = soup.find("a", href=lambda x: x and x.strip() == "fixtures.xlsx")
-
-    if not link:
-        raise Exception("fixtures.xlsx não encontrado")
-
+    soup = BeautifulSoup(
+        requests.get("https://www.football-data.co.uk/matches.php").text,
+        "html.parser"
+    )
+    link = soup.find("a", href=lambda x: x and "fixtures.xlsx" in x)
     url = BASE_SITE + link["href"]
-    arquivo = requests.get(url)
-    arquivo.raise_for_status()
 
-    df = pd.read_excel(BytesIO(arquivo.content), engine="openpyxl")
-    df = df[['Div', 'Date', 'Time', 'HomeTeam', 'AwayTeam']]
-    df = df.rename(columns={
-        'Date': 'Data',
-        'Time': 'Hora',
-        'HomeTeam': 'Mandante',
-        'AwayTeam': 'Visitante'
-    })
-
+    df = pd.read_excel(requests.get(url).content)
+    df = df[['Div','Date','Time','HomeTeam','AwayTeam']]
+    df.columns = ['Div','Data','Hora','Mandante','Visitante']
     df.to_excel(destino, index=False)
 
-# =========================
-# DOWNLOAD TEMPORADAS
-# =========================
-def baixar_temp_extra(destino_base):
-    page_url = "https://www.football-data.co.uk/all_new_data.php"
-    response = requests.get(page_url)
-    response.raise_for_status()
-
-    soup = BeautifulSoup(response.text, "html.parser")
+def baixar_temp_extra(destino_dir):
+    soup = BeautifulSoup(
+        requests.get("https://www.football-data.co.uk/all_new_data.php").text,
+        "html.parser"
+    )
     link = soup.find("a", href=lambda x: x and "new_leagues_data.xlsx" in x)
-
-    if not link:
-        raise Exception("new_leagues_data.xlsx não encontrado")
-
     url = BASE_SITE + link["href"]
-    arquivo = requests.get(url)
-    arquivo.raise_for_status()
 
-    with open(os.path.join(destino_base, "TempExtra.xlsx"), "wb") as f:
-        f.write(arquivo.content)
+    with open(os.path.join(destino_dir, "TempExtra.xlsx"), "wb") as f:
+        f.write(requests.get(url).content)
 
-def baixar_temp_main(destino_base, qtd):
-    page_url = "https://www.football-data.co.uk/downloadm.php"
-    response = requests.get(page_url)
-    response.raise_for_status()
+def baixar_temp_main(destino_dir, qtd):
+    soup = BeautifulSoup(
+        requests.get("https://www.football-data.co.uk/downloadm.php").text,
+        "html.parser"
+    )
 
-    soup = BeautifulSoup(response.text, "html.parser")
-    temporadas = temporadas_recentes(qtd)
-
-    for ini, fim in temporadas:
-        nome = f"all-euro-data-{ini}-{fim}.xlsx"
+    for a1, a2 in temporadas_recentes(qtd):
+        nome = f"all-euro-data-{a1}-{a2}.xlsx"
         link = soup.find("a", href=lambda x: x and nome in x)
-
         if not link:
             continue
 
         url = BASE_SITE + link["href"]
-        arquivo = requests.get(url)
-        arquivo.raise_for_status()
+        with open(os.path.join(destino_dir, f"Temp{a1}{a2}.xlsx"), "wb") as f:
+            f.write(requests.get(url).content)
 
-        destino = os.path.join(destino_base, f"Temp{ini}{fim}.xlsx")
-        with open(destino, "wb") as f:
-            f.write(arquivo.content)
+###################################
+# MAIN – DOWNLOAD
+###################################
 
-# =========================
-# MAIN
-# =========================
-destino_extra = os.path.join(BASE_DATA, "JogosExtra.xlsx")
-destino_main = os.path.join(BASE_DATA, "JogosMain.xlsx")
+baixar_jogos_extra(os.path.join(BASE_DIR, "JogosExtra.xlsx"))
+baixar_jogos_main(os.path.join(BASE_DIR, "JogosMain.xlsx"))
+baixar_temp_extra(BASE_DIR)
+baixar_temp_main(BASE_DIR, 3)
 
-baixar_jogos_extra(destino_extra)
-baixar_jogos_main(destino_main)
-baixar_temp_extra(BASE_DATA)
-baixar_temp_main(BASE_DATA, 3)
+###################################
+# CONSOLIDA JOGOS
+###################################
 
-print("✅ Downloads finalizados")
+arquivos = glob.glob(os.path.join(BASE_DIR, "Jogos*.xlsx"))
+lista = []
+
+for arq in arquivos:
+    df = pd.read_excel(arq)
+    df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+    df['Hora'] = df['Hora'].astype(str).str[:5]
+    lista.append(df)
+
+jogos = pd.concat(lista).sort_values(['Data','Hora'])
+
+###################################
+# CONSOLIDA TEMPORADAS
+###################################
+
+dfs = []
+for arq in glob.glob(os.path.join(BASE_DIR, "Temp*.xlsx")):
+    abas = pd.read_excel(arq, sheet_name=None)
+
+    for _, df in abas.items():
+        if "TempExtra" in arq:
+            df = df.rename(columns={
+                'Country':'Div','Home':'HomeTeam','Away':'AwayTeam',
+                'HG':'FTHG','AG':'FTAG'
+            })
+            df['HTHG'] = np.nan
+            df['HTAG'] = np.nan
+
+        df = df[['Div','Date','Time','HomeTeam','AwayTeam','FTHG','FTAG','HTHG','HTAG']]
+        dfs.append(df)
+
+temporadas = pd.concat(dfs)
+temporadas.columns = ['Div','Data','Hora','Mandante','Visitante','GM','GS','GM1T','GS1T']
+
+###################################
+# MÉTRICAS
+###################################
+
+Clubs = pd.concat([temporadas['Mandante'], temporadas['Visitante']]).drop_duplicates()
+Clubs = pd.DataFrame({'Time':Clubs})
+
+Clubs['GM10'] = Clubs['Time'].apply(calcular_gm10)
+Clubs['GS10'] = Clubs['Time'].apply(calcular_gs10)
+Clubs['GMHT10'] = Clubs['Time'].apply(calcular_gmht)
+Clubs['GSHT10'] = Clubs['Time'].apply(calcular_gsht)
+Clubs['GMC'] = Clubs['Time'].apply(calcular_gmc)
+Clubs['GMHTC'] = Clubs['Time'].apply(calcular_gmhtc)
+Clubs['GSF'] = Clubs['Time'].apply(calcular_gsf)
+Clubs['GSHTF'] = Clubs['Time'].apply(calcular_gshtf)
+
+###################################
+# FIXTURES + ALERTAS
+###################################
+
+jogos['Hora'] = pd.to_datetime(jogos['Hora'], format='%H:%M', errors='coerce').dt.time
+jogos['Data/Hora'] = jogos.apply(
+    lambda x: pd.Timestamp.combine(x['Data'].date(), x['Hora']), axis=1
+) - pd.Timedelta(hours=3)
+
+clubs = Clubs.set_index('Time')
+
+jogos['Gols_HT_AJ'] = (
+    clubs.loc[jogos['Mandante'], 'GMHTC'].values +
+    clubs.loc[jogos['Visitante'], 'GSHTF'].values
+) / 2
+
+agora = pd.Timestamp.now()
+jogos = jogos[jogos['Data/Hora'] > agora]
+
+for _, linha in jogos.iterrows():
+    gols = linha['Gols_HT_AJ']
+    if pd.isna(gols) or gols < 0.60:
+        continue
+
+    hora = linha['Data/Hora'].strftime('%H:%M')
+    dia = linha['Data/Hora'].strftime('%d/%m')
+
+    msg = f"""
+⚽ *Próximo jogo*
+🗓️ {dia}
+🕒 {hora}
+{linha['Mandante']} x {linha['Visitante']}
+Gols HT: {'Acima de 1' if gols >= 0.90 else 'Acima de 0.5'}
+"""
+    enviar_telegram(msg)
+
+print("✅ Script finalizado com sucesso")
