@@ -1,7 +1,4 @@
 pandas
-os
-glob
 numpy
 requests
-BeautifulSoup
-datetime
+beautifulsoup4
