@@ -312,6 +312,8 @@ for _, linha in jogos.iterrows():
 {linha['Mandante']} x {linha['Visitante']}
 Gols HT: {'Acima de 1' if gols >= 0.90 else 'Acima de 0.5'}
 """
+    print("DEBUG TOKEN:", "OK" if os.getenv("TELEGRAM_TOKEN") else "NÃO")
+    print("DEBUG CHAT_ID:", "OK" if os.getenv("TELEGRAM_CHAT_ID") else "NÃO")
     enviar_telegram(msg)
 
 print("✅ Script finalizado com sucesso")
