@@ -16,6 +16,8 @@ BASE_PAGE = "https://www.football-data.co.uk/matches_new_leagues.php"
 BASE_DIR = os.path.join(os.getcwd(), "base")
 os.makedirs(BASE_DIR, exist_ok=True)
 
+ENVIADOS_FILE = os.path.join(BASE_DIR, "enviados.csv")
+
 ###################################
 # TELEGRAM
 ###################################
@@ -156,7 +158,6 @@ def calcular_gshtf(time):
 ###################################
 
 def baixar_jogos_extra(destino):
-    print("🔄 Acessando página de fixtures...")
     soup = BeautifulSoup(requests.get(BASE_PAGE).text, "html.parser")
     link = soup.find("a", href=lambda x: x and "new_league_fixtures" in x)
 
@@ -164,11 +165,8 @@ def baixar_jogos_extra(destino):
     if not url.startswith("http"):
         url = BASE_SITE + url
 
-    arq = requests.get(url)
-
-    os.makedirs(os.path.dirname(destino), exist_ok=True)
     with open(destino, "wb") as f:
-        f.write(arq.content)
+        f.write(requests.get(url).content)
 
     df = pd.read_excel(destino)
     df = df[['Country','Date','Time','Home','Away']]
@@ -294,10 +292,31 @@ jogos['Gols_HT_AJ'] = (
     clubs.loc[jogos['Visitante'], 'GSHTF'].values
 ) / 2
 
+# histórico enviados
+if os.path.exists(ENVIADOS_FILE):
+    enviados = pd.read_csv(ENVIADOS_FILE)
+else:
+    enviados = pd.DataFrame(columns=['id_jogo'])
+
 agora = pd.Timestamp.now()
-jogos = jogos[jogos['Data/Hora'] > agora]
+limite = agora + pd.Timedelta(minutes=60)
+
+jogos = jogos[
+    (jogos['Data/Hora'] > agora) &
+    (jogos['Data/Hora'] <= limite)
+]
+
+jogos['id_jogo'] = (
+    jogos['Data/Hora'].astype(str) + "_" +
+    jogos['Mandante'] + "_" +
+    jogos['Visitante']
+)
 
 for _, linha in jogos.iterrows():
+
+    if linha['id_jogo'] in enviados['id_jogo'].values:
+        continue
+
     gols = linha['Gols_HT_AJ']
     if pd.isna(gols) or gols < 0.60:
         continue
@@ -312,8 +331,13 @@ for _, linha in jogos.iterrows():
 {linha['Mandante']} x {linha['Visitante']}
 Gols HT: {'Acima de 1' if gols >= 0.90 else 'Acima de 0.5'}
 """
-    print("DEBUG TOKEN:", "OK" if os.getenv("TELEGRAM_TOKEN") else "NÃO")
-    print("DEBUG CHAT_ID:", "OK" if os.getenv("TELEGRAM_CHAT_ID") else "NÃO")
-    enviar_telegram(msg)
+
+    if enviar_telegram(msg):
+        enviados = pd.concat([
+            enviados,
+            pd.DataFrame({'id_jogo': [linha['id_jogo']]})
+        ])
+
+enviados.to_csv(ENVIADOS_FILE, index=False)
 
 print("✅ Script finalizado com sucesso")
