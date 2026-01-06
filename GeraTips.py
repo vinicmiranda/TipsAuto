@@ -311,6 +311,14 @@ Clubs['GMF10'] = Clubs['Time'].apply(calcular_gmf10)
 # FIXTURES + ALERTAS
 ###################################
 
+
+agora = pd.Timestamp.now()
+limite = agora + pd.Timedelta(minutes=60)
+
+jogos = jogos[
+    (jogos['Data/Hora'] > agora) 
+]
+
 jogos['Hora'] = pd.to_datetime(jogos['Hora'], format='%H:%M', errors='coerce').dt.time
 jogos['Data/Hora'] = jogos.apply(
     lambda x: pd.Timestamp.combine(x['Data'].date(), x['Hora']), axis=1
