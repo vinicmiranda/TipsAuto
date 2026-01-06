@@ -16,8 +16,6 @@ BASE_PAGE = "https://www.football-data.co.uk/matches_new_leagues.php"
 BASE_DIR = os.path.join(os.getcwd(), "base")
 os.makedirs(BASE_DIR, exist_ok=True)
 
-ENVIADOS_FILE = os.path.join(BASE_DIR, "enviados.csv")
-
 ###################################
 # TELEGRAM
 ###################################
@@ -339,11 +337,7 @@ jogos['Gols_FT_AJ'] = (
 
 jogos['Gols_FT_AJ_AR'] = jogos['Gols_FT_AJ'].apply(arredondar_gols)
 
-# histórico enviados
-if os.path.exists(ENVIADOS_FILE):
-    enviados = pd.read_csv(ENVIADOS_FILE)
-else:
-    enviados = pd.DataFrame(columns=['id_jogo'])
+
 
 agora = pd.Timestamp.now()
 limite = agora + pd.Timedelta(minutes=60)
@@ -353,16 +347,7 @@ jogos = jogos[
     (jogos['Data/Hora'] <= limite)
 ]
 
-jogos['id_jogo'] = (
-    jogos['Data/Hora'].astype(str) + "_" +
-    jogos['Mandante'] + "_" +
-    jogos['Visitante']
-)
-
 for _, linha in jogos.iterrows():
-
-    if linha['id_jogo'] in enviados['id_jogo'].values:
-        continue
 
     msgs = []
 
@@ -379,7 +364,6 @@ for _, linha in jogos.iterrows():
     if not pd.isna(gols_ft) and gols_ft >= 1:
         msgs.append(f"Mais de {gols_ft - 0.5} gols no jogo")
 
-    # Se não tiver nenhuma mensagem válida, pula
     if not msgs:
         continue
 
@@ -394,13 +378,8 @@ for _, linha in jogos.iterrows():
 
 """ + "\n".join(msgs)
 
-    if enviar_telegram(msg):
-        enviados = pd.concat([
-            enviados,
-            pd.DataFrame({'id_jogo': [linha['id_jogo']]})
-        ])
+    enviar_telegram(msg)
+])
 
-
-enviados.to_csv(ENVIADOS_FILE, index=False)
 
 print("✅ Script finalizado com sucesso")
