@@ -379,7 +379,6 @@ for _, linha in jogos.iterrows():
 """ + "\n".join(msgs)
 
     enviar_telegram(msg)
-])
 
 
 print("✅ Script finalizado com sucesso")
