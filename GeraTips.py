@@ -338,15 +338,6 @@ jogos['Gols_FT_AJ'] = (
 jogos['Gols_FT_AJ_AR'] = jogos['Gols_FT_AJ'].apply(arredondar_gols)
 
 
-
-agora = pd.Timestamp.now()
-limite = agora + pd.Timedelta(minutes=60)
-
-jogos = jogos[
-    (jogos['Data/Hora'] > agora) &
-    (jogos['Data/Hora'] <= limite)
-]
-
 for _, linha in jogos.iterrows():
 
     msgs = []
