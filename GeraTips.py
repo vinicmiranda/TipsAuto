@@ -123,6 +123,28 @@ def calcular_gmc(time):
 
     return jogos['GM'].sum() / len(jogos)
 
+def calcular_gsc10(time):
+    jogos = temporadas[
+        temporadas['Mandante'] == time
+    ].sort_values(['Data','Hora'], ascending=False).head(10)
+
+    if jogos.empty:
+        return None
+
+    return jogos['GS'].sum() / len(jogos)
+
+
+def calcular_gmf10(time):
+    jogos = temporadas[
+        temporadas['Visitante'] == time
+    ].sort_values(['Data','Hora'], ascending=False).head(10)
+
+    if jogos.empty:
+        return None
+
+    return jogos['GM'].sum() / len(jogos)
+
+
 def calcular_gmhtc(time):
     jogos = temporadas[
         temporadas['Mandante'] == time
@@ -152,6 +174,15 @@ def calcular_gshtf(time):
         return None
 
     return jogos['GS1T'].sum() / len(jogos)
+
+def arredondar_gols(valor):
+    if pd.isna(valor):
+        return None
+
+    inteiro = int(valor)
+    decimal = valor - inteiro
+
+    return inteiro + 1 if decimal >= 0.7 else inteiro
 
 ###################################
 # DOWNLOADS
@@ -275,6 +306,8 @@ Clubs['GMC'] = Clubs['Time'].apply(calcular_gmc)
 Clubs['GMHTC'] = Clubs['Time'].apply(calcular_gmhtc)
 Clubs['GSF'] = Clubs['Time'].apply(calcular_gsf)
 Clubs['GSHTF'] = Clubs['Time'].apply(calcular_gshtf)
+Clubs['GSC10'] = Clubs['Time'].apply(calcular_gsc10)
+Clubs['GMF10'] = Clubs['Time'].apply(calcular_gmf10)
 
 ###################################
 # FIXTURES + ALERTAS
@@ -291,6 +324,20 @@ jogos['Gols_HT_AJ'] = (
     clubs.loc[jogos['Mandante'], 'GMHTC'].values +
     clubs.loc[jogos['Visitante'], 'GSHTF'].values
 ) / 2
+
+jogos['Gols_FT_AJ'] = (
+    (
+        clubs.loc[jogos['Mandante'], 'GMC'].values +
+        clubs.loc[jogos['Visitante'], 'GSF'].values
+    ) / 2
+    +
+    (
+        clubs.loc[jogos['Visitante'], 'GMF10'].values +
+        clubs.loc[jogos['Mandante'], 'GSC10'].values
+    ) / 2
+)
+
+jogos['Gols_FT_AJ_AR'] = jogos['Gols_FT_AJ'].apply(arredondar_gols)
 
 # histórico enviados
 if os.path.exists(ENVIADOS_FILE):
@@ -317,8 +364,23 @@ for _, linha in jogos.iterrows():
     if linha['id_jogo'] in enviados['id_jogo'].values:
         continue
 
-    gols = linha['Gols_HT_AJ']
-    if pd.isna(gols) or gols < 0.60:
+    msgs = []
+
+    # -------- PRIMEIRO TEMPO --------
+    gols_ht = linha['Gols_HT_AJ']
+    if not pd.isna(gols_ht) and gols_ht >= 0.60:
+        if gols_ht >= 0.90:
+            msgs.append("Mais de *1* gol no **Primeiro tempo**")
+        else:
+            msgs.append("Mais de *0.5* gol no **Primeiro tempo**")
+
+    # -------- JOGO TODO --------
+    gols_ft = linha['Gols_FT_AJ_AR']
+    if not pd.isna(gols_ft) and gols_ft >= 1:
+        msgs.append(f"Mais de {gols_ft - 0.5} gols no jogo")
+
+    # Se não tiver nenhuma mensagem válida, pula
+    if not msgs:
         continue
 
     hora = linha['Data/Hora'].strftime('%H:%M')
@@ -329,14 +391,15 @@ for _, linha in jogos.iterrows():
 🗓️ {dia}
 🕒 {hora}
 {linha['Mandante']} x {linha['Visitante']}
-Gols HT: {'Acima de 1' if gols >= 0.90 else 'Acima de 0.5'}
-"""
+
+""" + "\n".join(msgs)
 
     if enviar_telegram(msg):
         enviados = pd.concat([
             enviados,
             pd.DataFrame({'id_jogo': [linha['id_jogo']]})
         ])
+
 
 enviados.to_csv(ENVIADOS_FILE, index=False)
 
