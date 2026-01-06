@@ -320,11 +320,13 @@ jogos['Data/Hora'] = jogos.apply(
     lambda x: pd.Timestamp.combine(x['Data'].date(), x['Hora']), axis=1
 ) - pd.Timedelta(hours=3)
 
-agora = pd.Timestamp.now().floor('min')
+hoje = pd.Timestamp.now().normalize()
 
 jogos = jogos[
-    jogos['Data/Hora'] >= agora
+    jogos['Data/Hora'].dt.normalize() == hoje
 ]
+
+
 clubs = Clubs.set_index('Time')
 
 jogos['Gols_HT_AJ'] = (
