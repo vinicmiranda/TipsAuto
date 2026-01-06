@@ -256,6 +256,12 @@ baixar_temp_main(BASE_DIR, 3)
 ###################################
 
 arquivos = glob.glob(os.path.join(BASE_DIR, "Jogos*.xlsx"))
+
+arquivo_extra = os.path.join(BASE_DIR, "JogosAdicionais.xlsx")
+if os.path.exists(arquivo_extra):
+    arquivos.append(arquivo_extra)
+
+
 lista = []
 
 for arq in arquivos:
