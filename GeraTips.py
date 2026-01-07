@@ -201,6 +201,8 @@ def baixar_jogos_extra(destino):
     df = df[['Country','Date','Time','Home','Away']]
     df.columns = ['Div','Data','Hora','Mandante','Visitante']
     df.to_excel(destino, index=False)
+    print("📄 Jogos EXTRA baixados:")
+    print(df[['Data','Hora','Mandante','Visitante']])
 
 def baixar_jogos_main(destino):
     soup = BeautifulSoup(
@@ -214,6 +216,8 @@ def baixar_jogos_main(destino):
     df = df[['Div','Date','Time','HomeTeam','AwayTeam']]
     df.columns = ['Div','Data','Hora','Mandante','Visitante']
     df.to_excel(destino, index=False)
+    print("📄 Jogos MAIN baixados:")
+    print(df[['Data','Hora','Mandante','Visitante']])
 
 def baixar_temp_extra(destino_dir):
     soup = BeautifulSoup(
@@ -269,6 +273,9 @@ for arq in arquivos:
     df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
     df['Hora'] = df['Hora'].astype(str).str[:5]
     lista.append(df)
+    nome_arq = os.path.basename(arq)
+    print(f"📄 Jogos carregados do arquivo {nome_arq}:")
+    print(df[['Data','Hora','Mandante','Visitante']])
 
 jogos = pd.concat(lista).sort_values(['Data','Hora'])
 
