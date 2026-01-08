@@ -485,7 +485,8 @@ for _, linha in jogos.iterrows():
     dia = linha['Data/Hora'].strftime('%d/%m')
 
     msg = f"""
-⚽ *Próximo jogo*
+    
+⚽ *{linha['Div']}*
 🗓️ {dia}
 🕒 {hora}
 {linha['Mandante']} x {linha['Visitante']}
