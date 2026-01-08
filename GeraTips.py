@@ -202,7 +202,7 @@ def baixar_jogos_extra(destino):
     df.columns = ['Div','Data','Hora','Mandante','Visitante']
     df.to_excel(destino, index=False)
     print("📄 Jogos EXTRA baixados:")
-    print(df[['Data','Hora','Mandante','Visitante']])
+    print(df[['Div','Data','Hora','Mandante','Visitante']])
 
 def baixar_jogos_main(destino):
     soup = BeautifulSoup(
@@ -217,7 +217,7 @@ def baixar_jogos_main(destino):
     df.columns = ['Div','Data','Hora','Mandante','Visitante']
     df.to_excel(destino, index=False)
     print("📄 Jogos MAIN baixados:")
-    print(df[['Data','Hora','Mandante','Visitante']])
+    print(df[['Div','Data','Hora','Mandante','Visitante']])
 
 def baixar_temp_extra(destino_dir):
     soup = BeautifulSoup(
