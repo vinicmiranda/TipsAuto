@@ -50,7 +50,7 @@ MAPA_DIV = {
     'P1': 'Primeira Liga',
 
     # HOLANDA
-    'N1': 'Eredivisie'
+    'N1': 'Eredivisie',
 
     # BÉLGICA
     'B1': 'Jupiler Pro League',
@@ -59,9 +59,9 @@ MAPA_DIV = {
     'T1': 'Süper Lig',
 
     # GRÉCIA
-    'G1': 'Super League Greece'
+    'G1': 'Super League Greece',
     
- # ARGENTINA
+    # ARGENTINA
     'Argentina': 'Campeonato Argentino',
 
     # AUSTRIA
