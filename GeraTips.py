@@ -16,6 +16,102 @@ BASE_PAGE = "https://www.football-data.co.uk/matches_new_leagues.php"
 BASE_DIR = os.path.join(os.getcwd(), "base")
 os.makedirs(BASE_DIR, exist_ok=True)
 
+MAPA_DIV = {
+    # INGLATERRA
+    'E0': 'Premier League',
+    'E1': 'Championship',
+    'E2': 'League One',
+    'E3': 'League Two',
+    'EC': 'National League',
+
+    # ESCÓCIA
+    'SC0': 'Scottish Premiership',
+    'SC1': 'Scottish Championship',
+    'SC2': 'Scottish League One',
+    'SC3': 'Scottish League Two',
+
+    # ALEMANHA
+    'D1': 'Bundesliga',
+    'D2': '2. Bundesliga',
+
+    # ITÁLIA
+    'I1': 'Serie A',
+    'I2': 'Serie B',
+
+    # ESPANHA
+    'SP1': 'La Liga',
+    'SP2': 'La Liga 2',
+
+    # FRANÇA
+    'F1': 'Ligue 1',
+    'F2': 'Ligue 2',
+
+    # PORTUGAL
+    'P1': 'Primeira Liga',
+
+    # HOLANDA
+    'N1': 'Eredivisie'
+
+    # BÉLGICA
+    'B1': 'Jupiler Pro League',
+
+    # TURQUIA
+    'T1': 'Süper Lig',
+
+    # GRÉCIA
+    'G1': 'Super League Greece'
+    
+ # ARGENTINA
+    'Argentina': 'Campeonato Argentino',
+
+    # AUSTRIA
+    'Austria': 'Campeonato Austríaco',
+
+    # BRASIL
+    'Brazil': 'Campeonato Brasileiro',
+
+    # CHINA
+    'China': 'Campeonato Chinês',
+
+    # DINAMARCA
+    'Denmark': 'Campeonato Dinamarquês',
+
+    # FINLÂNDIA
+    'Finland': 'Campeonato Finlandês',
+
+    # IRLANDA
+    'Ireland': 'Campeonato Irlandês',
+
+    # JAPÃO
+    'Japan': 'Campeonato Japonês',
+
+    # MÉXICO
+    'Mexico': 'Campeonato Mexicano',
+
+    # NORUEGA
+    'Norway': 'Campeonato Norueguês',
+
+    # POLÔNIA
+    'Poland': 'Campeonato Polonês',
+
+    # ROMÊNIA
+    'Romania': 'Campeonato Romeno',
+
+    # RÚSSIA
+    'Russia': 'Campeonato Russo',
+
+    # SUÉCIA
+    'Sweden': 'Campeonato Sueco',
+
+    # SUÍÇA
+    'Switzerland': 'Campeonato Suíço',
+
+    # ESTADOS UNIDOS
+    'USA': 'Campeonato Norte-Americano'
+    
+}
+
+
 ###################################
 # TELEGRAM
 ###################################
@@ -279,6 +375,9 @@ for arq in arquivos:
 
 jogos = pd.concat(lista).sort_values(['Data','Hora'])
 
+jogos['Div'] = jogos['Div'].map(MAPA_DIV).fillna(jogos['Div'])
+
+
 ###################################
 # CONSOLIDA TEMPORADAS
 ###################################
@@ -393,7 +492,7 @@ for _, linha in jogos.iterrows():
 
 """ + "\n".join(msgs)
 
-    #enviar_telegram(msg)
+    enviar_telegram(msg)
 
 
 print("✅ Script finalizado com sucesso")
