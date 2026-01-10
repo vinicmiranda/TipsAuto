@@ -432,11 +432,12 @@ jogos['Data/Hora'] = jogos.apply(
 ) - pd.Timedelta(hours=3)
 
 agora = pd.Timestamp.now()
-limite = agora + pd.Timedelta(hours=12)
+limite_up = agora + pd.Timedelta(hours=12)
+limite_down = agora - pd.Timedelta(hours=3)
 
 jogos = jogos[
-    (jogos['Data/Hora'] >= agora) &
-    (jogos['Data/Hora'] <= limite)
+    (jogos['Data/Hora'] >= limite_down) &
+    (jogos['Data/Hora'] <= limite_up)
 ]
 
 clubs = Clubs.set_index('Time')
