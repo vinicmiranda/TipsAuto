@@ -5,6 +5,7 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
+import time
 
 ###################################
 # CONFIGURAÇÕES GERAIS
@@ -494,6 +495,7 @@ for _, linha in jogos.iterrows():
 """ + "\n".join(msgs)
 
     enviar_telegram(msg)
+    time.sleep(1)
 
 
 print("✅ Script finalizado com sucesso")
