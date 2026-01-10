@@ -3,7 +3,7 @@ name: TipsAuto
 on:
   # Executa automaticamente a cada 1 minuto (UTC)
   schedule:
-    - cron: "30 7 * * *"
+    - cron: "1 0 * * *"
   # Permite execução manual via GitHub Actions
   workflow_dispatch:
 
