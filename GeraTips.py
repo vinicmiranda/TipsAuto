@@ -347,8 +347,8 @@ def baixar_temp_main(destino_dir, qtd):
 # MAIN – DOWNLOAD
 ###################################
 
-baixar_jogos_extra(os.path.join(BASE_DIR, "JogosExtra.xlsx"))
-baixar_jogos_main(os.path.join(BASE_DIR, "JogosMain.xlsx"))
+#baixar_jogos_extra(os.path.join(BASE_DIR, "JogosExtra.xlsx"))
+#baixar_jogos_main(os.path.join(BASE_DIR, "JogosMain.xlsx"))
 baixar_temp_extra(BASE_DIR)
 baixar_temp_main(BASE_DIR, 3)
 
