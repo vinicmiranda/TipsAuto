@@ -474,19 +474,21 @@ for _, linha in jogos.iterrows():
     #    else:
     #        msgs.append("Mais de *0.5* gol no **Primeiro tempo**")
 
-    # -------- JOGO TODO --------
+    # -------- JOGO TODO (COM GESTÃO) --------
     gols_ft = linha['Gols_FT_AJ_AR']
 
     if not pd.isna(gols_ft):
         linha_aposta = gols_ft - 0.5  # ex: 2.5, 3.5
 
-        # Apenas apostas acima de 1.5 gols
+        # Apenas acima de 1.5 gols
         if linha_aposta > 1.5:
             protecao = linha_aposta - 1
 
             msgs.append(
-                f"Se mais que *{linha_aposta}* gols estiver com odd maior ou igual a *1.90*, apostar *{protecao}* gols"
+                f"*Mais de {linha_aposta} gols no jogo*\n"
+                f"_(Se mais que {linha_aposta} gols estiver com odd maior ou igual a 1.90, apostar {protecao} gols)_"
             )
+
 
     if not msgs:
         continue
