@@ -507,8 +507,9 @@ for _, linha in jogos.iterrows():
         "Mandante": linha["Mandante"],
         "Visitante": linha["Visitante"],
         "Linha_Gols_HT": linha["Gols_HT_AJ"],
-        "Linha_Gols_FT": gols_ft,
-        "Mensagem": " | ".join(msgs),
+        "Resultado_HT": "",
+        "Linha_Gols_FT": linha["Gols_FT_AJ_AR"],
+        "Resultado_FT": "",
         "Data_Execucao": pd.Timestamp.now(),
     })
 
