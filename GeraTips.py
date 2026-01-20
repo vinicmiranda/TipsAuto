@@ -427,10 +427,18 @@ Clubs['GMF10'] = Clubs['Time'].apply(calcular_gmf10)
 
 
 
-jogos['Hora'] = pd.to_datetime(jogos['Hora'], format='%H:%M', errors='coerce').dt.time
-jogos['Data/Hora'] = jogos.apply(
-    lambda x: pd.Timestamp.combine(x['Data'].date(), x['Hora']), axis=1
+jogos['Hora'] = pd.to_datetime(
+    jogos['Hora'], format='%H:%M', errors='coerce'
+)
+
+jogos = jogos.dropna(subset=['Data', 'Hora'])
+
+jogos['Data/Hora'] = (
+    jogos['Data'] + 
+    pd.to_timedelta(jogos['Hora'].dt.hour, unit='h') +
+    pd.to_timedelta(jogos['Hora'].dt.minute, unit='m')
 ) - pd.Timedelta(hours=3)
+
 
 agora = pd.Timestamp.now()
 limite_up = agora + pd.Timedelta(hours=12)
@@ -513,7 +521,9 @@ for _, linha in jogos.iterrows():
         "Data_Execucao": pd.Timestamp.now(),
     })
 
-if jogos_alertados:
+print(f"Total de jogos alertados: {len(jogos_alertados)}")
+
+if len(jogos_alertados) > 0:
     df_novos = pd.DataFrame(jogos_alertados)
 
     if os.path.exists(ARQUIVO_JOGOS_GERADOS):
