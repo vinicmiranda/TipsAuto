@@ -13,7 +13,7 @@ import time
 
 BASE_SITE = "https://www.football-data.co.uk/"
 BASE_PAGE = "https://www.football-data.co.uk/matches_new_leagues.php"
-ARQUIVO_JOGOS_GERADOS = os.path.join(os.getcwd(), "Jogos_Gerados.xlsx")
+ARQUIVO_JOGOS_GERADOS = os.path.join(os.getcwd(), "JogosGerados.xlsx")
 
 BASE_DIR = os.path.join(os.getcwd(), "base")
 os.makedirs(BASE_DIR, exist_ok=True)
