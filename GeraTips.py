@@ -44,11 +44,6 @@ def enviar_telegram(mensagem):
 # FUNÇÕES AUXILIARES
 ###################################
 
-def temporadas_recentes(qtd):
-    hoje = datetime.today()
-    inicio = hoje.year - 1 if hoje.month < 8 else hoje.year
-    return [(inicio - i, inicio - i + 1) for i in range(qtd)]
-
 def arredondar_gols(valor):
     if pd.isna(valor):
         return None
@@ -102,12 +97,21 @@ baixar_jogos_main(os.path.join(BASE_DIR, "JogosMain.xlsx"))
 lista = []
 for arq in glob.glob(os.path.join(BASE_DIR, "Jogos*.xlsx")):
     df = pd.read_excel(arq)
+
+    if 'Div' not in df.columns:
+        df['Div'] = 'Desconhecido'
+
     df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
     df['Hora'] = pd.to_datetime(df['Hora'], format='%H:%M', errors='coerce')
     df = df.dropna(subset=['Data','Hora'])
     lista.append(df)
 
-jogos = pd.concat(lista)
+if not lista:
+    print("❌ Nenhum jogo carregado")
+    exit()
+
+jogos = pd.concat(lista, ignore_index=True)
+
 jogos['Data/Hora'] = (
     jogos['Data'] +
     pd.to_timedelta(jogos['Hora'].dt.hour, unit='h') +
@@ -119,10 +123,13 @@ jogos['Data/Hora'] = (
 ###################################
 
 agora = pd.Timestamp.now()
+
 jogos = jogos[
     (jogos['Data/Hora'] >= agora - pd.Timedelta(hours=3)) &
     (jogos['Data/Hora'] <= agora + pd.Timedelta(hours=12))
 ]
+
+print(f"Jogos após filtro de horário: {len(jogos)}")
 
 ###################################
 # ALERTAS
@@ -133,14 +140,15 @@ jogos_alertados = []
 for _, linha in jogos.iterrows():
     msgs = ["*Mais de 1.5 gols no jogo*"]
 
-    msg = f"""
-⚽ *{linha['Div']}*
-🗓️ {linha['Data/Hora'].strftime('%d/%m')}
-🕒 {linha['Data/Hora'].strftime('%H:%M')}
-{linha['Mandante']} x {linha['Visitante']}
-""" + "\n".join(msgs)
+    msg = (
+        f"⚽ *{linha['Div']}*\n"
+        f"🗓️ {linha['Data/Hora'].strftime('%d/%m')}\n"
+        f"🕒 {linha['Data/Hora'].strftime('%H:%M')}\n"
+        f"{linha['Mandante']} x {linha['Visitante']}\n\n"
+        + "\n".join(msgs)
+    )
 
-    enviar_telegram(msg)
+    enviado = enviar_telegram(msg)
     time.sleep(1)
 
     jogos_alertados.append({
@@ -150,6 +158,7 @@ for _, linha in jogos.iterrows():
         "Mandante": linha["Mandante"],
         "Visitante": linha["Visitante"],
         "Linha_Gols_FT": 1.5,
+        "Telegram_Enviado": enviado,
         "Data_Execucao": pd.Timestamp.now()
     })
 
@@ -165,28 +174,14 @@ if jogos_alertados:
     if os.path.exists(ARQUIVO_JOGOS_GERADOS):
         try:
             df_antigo = pd.read_excel(ARQUIVO_JOGOS_GERADOS)
-            if df_antigo.empty:
-                df_final = df_novos
-            else:
-                df_final = pd.concat(
-                    [df_antigo, df_novos],
-                    ignore_index=True,
-                    sort=False
-                )
-        except Exception as e:
-            print("⚠️ Excel antigo inválido, recriando:", e)
+            df_final = pd.concat([df_antigo, df_novos], ignore_index=True)
+        except Exception:
             df_final = df_novos
     else:
         df_final = df_novos
 
-    colunas_chave = [
-        c for c in
-        ["Data","Hora","Mandante","Visitante","Linha_Gols_FT"]
-        if c in df_final.columns
-    ]
-
     df_final = df_final.drop_duplicates(
-        subset=colunas_chave,
+        subset=["Data","Hora","Mandante","Visitante","Linha_Gols_FT"],
         keep="last"
     )
 
