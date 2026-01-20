@@ -13,6 +13,7 @@ import time
 
 BASE_SITE = "https://www.football-data.co.uk/"
 BASE_PAGE = "https://www.football-data.co.uk/matches_new_leagues.php"
+ARQUIVO_JOGOS_GERADOS = os.path.join(os.getcwd(), "Jogos_Gerados.xlsx")
 
 BASE_DIR = os.path.join(os.getcwd(), "base")
 os.makedirs(BASE_DIR, exist_ok=True)
@@ -462,50 +463,36 @@ jogos['Gols_FT_AJ'] = (
 jogos['Gols_FT_AJ_AR'] = jogos['Gols_FT_AJ'].apply(arredondar_gols)
 
 
-for _, linha in jogos.iterrows():
+jogos_alertados = []
 
+for _, linha in jogos.iterrows():
     msgs = []
 
-    # -------- PRIMEIRO TEMPO --------
-    #gols_ht = linha['Gols_HT_AJ']
-    #if not pd.isna(gols_ht) and gols_ht >= 0.60:
-    #    if gols_ht >= 0.90:
-    #        msgs.append("Mais de *1* gol no **Primeiro tempo**")
-    #    else:
-    #        msgs.append("Mais de *0.5* gol no **Primeiro tempo**")
+    if linha["Gols_HT_AJ"] >= 0.6:
+        msgs.append(
+            "Mais de *1* gol no **Primeiro tempo**"
+            if linha["Gols_HT_AJ"] >= 0.9
+            else "Mais de *0.5* gol no **Primeiro tempo**"
+        )
 
-    # -------- JOGO TODO (COM GESTÃO) --------
-    gols_ft = linha['Gols_FT_AJ_AR']
-
+    gols_ft = linha["Gols_FT_AJ_AR"]
     if not pd.isna(gols_ft):
         linha_aposta = gols_ft - 0.5
-
-        # Caso Over 1.5
         if linha_aposta == 1.5:
-            msgs.append(f"*Mais de 1.5 gols no jogo*")
-
-        # Caso Over acima de 1.5
+            msgs.append("*Mais de 1.5 gols no jogo*")
         elif linha_aposta > 1.5:
-            protecao = linha_aposta - 1
-
             msgs.append(
                 f"*Mais de {linha_aposta} gols no jogo*\n"
-                f"_(Se mais que {linha_aposta} gols estiver com odd maior ou igual a 1.90, apostar {protecao} gols)_"
+                f"_(Se mais que {linha_aposta} gols estiver com odd ≥ 1.90, apostar {linha_aposta - 1} gols)_"
             )
-
-
 
     if not msgs:
         continue
 
-    hora = linha['Data/Hora'].strftime('%H:%M')
-    dia = linha['Data/Hora'].strftime('%d/%m')
-
     msg = f"""
-    
 ⚽ *{linha['Div']}*
-🗓️ {dia}
-🕒 {hora}
+🗓️ {linha['Data/Hora'].strftime('%d/%m')}
+🕒 {linha['Data/Hora'].strftime('%H:%M')}
 {linha['Mandante']} x {linha['Visitante']}
 
 """ + "\n".join(msgs)
@@ -513,5 +500,35 @@ for _, linha in jogos.iterrows():
     enviar_telegram(msg)
     time.sleep(1)
 
+    jogos_alertados.append({
+        "Data": linha["Data/Hora"].date(),
+        "Hora": linha["Data/Hora"].strftime("%H:%M"),
+        "Divisão": linha["Div"],
+        "Mandante": linha["Mandante"],
+        "Visitante": linha["Visitante"],
+        "Linha_Gols_HT": linha["Gols_HT_AJ"],
+        "Linha_Gols_FT": gols_ft,
+        "Mensagem": " | ".join(msgs),
+        "Data_Execucao": pd.Timestamp.now(),
+    })
 
-print("✅ Script finalizado com sucesso")
+if jogos_alertados:
+    df_novos = pd.DataFrame(jogos_alertados)
+
+    if os.path.exists(ARQUIVO_JOGOS_GERADOS):
+        df_antigo = pd.read_excel(ARQUIVO_JOGOS_GERADOS)
+        df_final = pd.concat([df_antigo, df_novos], ignore_index=True)
+    else:
+        df_final = df_novos
+
+    df_final = df_final.drop_duplicates(
+        subset=["Data", "Hora", "Mandante", "Visitante", "Linha_Gols_FT"],
+        keep="last",
+    )
+
+    df_final.to_excel(ARQUIVO_JOGOS_GERADOS, index=False)
+    print("📊 Excel atualizado")
+else:
+    print("ℹ️ Nenhum jogo gerado")
+
+print("✅ Script finalizado")
