@@ -36,8 +36,3 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           
-      - name: Upload JogosGerados.xlsx
-        uses: actions/upload-artifact@v4
-        with:
-          name: JogosGerados
-          path: JogosGerados.xlsx
