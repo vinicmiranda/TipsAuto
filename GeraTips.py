@@ -17,22 +17,6 @@ BASE_PAGE = "https://www.football-data.co.uk/matches_new_leagues.php"
 BASE_DIR = os.path.join(os.getcwd(), "base")
 os.makedirs(BASE_DIR, exist_ok=True)
 
-DATA_HOJE = datetime.now().strftime("%Y%m%d")
-
-ARQUIVO_JOGOS_GERADOS = f"JogosGerados_{DATA_HOJE}.xlsx"
-ARQUIVO_CONTROLE = "jogos_enviados.csv"
-
-colunas_excel = [
-    "Data",
-    "Hora",
-    "Campeonato",
-    "Mandante",
-    "Visitante",
-    "Tipo_Tip",
-    "Mensagem",
-    "Data_Envio"
-]
-
 MAPA_DIV = {
     # INGLATERRA
     'E0': 'Premier League',
@@ -132,20 +116,6 @@ MAPA_DIV = {
 ###################################
 # TELEGRAM
 ###################################
-
-def salvar_tip_excel(registro):
-    """
-    registro: dict com as colunas definidas em colunas_excel
-    """
-    novo_df = pd.DataFrame([registro])
-
-    if os.path.exists(ARQUIVO_JOGOS_GERADOS):
-        df_existente = pd.read_excel(ARQUIVO_JOGOS_GERADOS)
-        df_final = pd.concat([df_existente, novo_df], ignore_index=True)
-    else:
-        df_final = novo_df
-
-    df_final.to_excel(ARQUIVO_JOGOS_GERADOS, index=False)
 
 def enviar_telegram(mensagem):
     TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -373,28 +343,6 @@ def baixar_temp_main(destino_dir, qtd):
         with open(os.path.join(destino_dir, f"Temp{a1}{a2}.xlsx"), "wb") as f:
             f.write(requests.get(url).content)
 
-
-def carregar_jogos_enviados():
-    if os.path.exists(ARQUIVO_CONTROLE):
-        return set(pd.read_csv(ARQUIVO_CONTROLE)["chave"].tolist())
-    return set()
-
-
-def salvar_jogos_enviados(chaves):
-    pd.DataFrame({"chave": list(chaves)}).to_csv(
-        ARQUIVO_CONTROLE, index=False
-    )
-
-
-def gerar_chave_jogo(registro):
-    return (
-        f"{registro['Data']}_"
-        f"{registro['Hora']}_"
-        f"{registro['Mandante']}_"
-        f"{registro['Visitante']}_"
-        f"{registro['Tipo_Tip']}"
-    )
-
 ###################################
 # MAIN – DOWNLOAD
 ###################################
@@ -414,8 +362,6 @@ arquivos = glob.glob(os.path.join(BASE_DIR, "Jogos*.xlsx"))
 #if os.path.exists(arquivo_extra):
 #    arquivos.append(arquivo_extra)
 
-jogos_enviados = carregar_jogos_enviados()
-novos_enviados = set()
 
 lista = []
 
@@ -426,7 +372,7 @@ for arq in arquivos:
     lista.append(df)
     nome_arq = os.path.basename(arq)
     print(f"📄 Jogos carregados do arquivo {nome_arq}:")
-
+    print(df[['Div','Data','Hora','Mandante','Visitante']])
 
 jogos = pd.concat(lista).sort_values(['Data','Hora'])
 
@@ -518,15 +464,15 @@ jogos['Gols_FT_AJ_AR'] = jogos['Gols_FT_AJ'].apply(arredondar_gols)
 
 for _, linha in jogos.iterrows():
 
-    msgs = set()
+    msgs = []
 
     # -------- PRIMEIRO TEMPO --------
-    # gols_ht = linha['Gols_HT_AJ']
-    # if not pd.isna(gols_ht) and gols_ht >= 0.60:
-    #     if gols_ht >= 0.90:
-    #         msgs.add("Mais de *1* gol no **Primeiro tempo**")
-    #     else:
-    #         msgs.add("Mais de *0.5* gol no **Primeiro tempo**")
+    #gols_ht = linha['Gols_HT_AJ']
+    #if not pd.isna(gols_ht) and gols_ht >= 0.60:
+    #    if gols_ht >= 0.90:
+    #        msgs.append("Mais de *1* gol no **Primeiro tempo**")
+    #    else:
+    #        msgs.append("Mais de *0.5* gol no **Primeiro tempo**")
 
     # -------- JOGO TODO (COM GESTÃO) --------
     gols_ft = linha['Gols_FT_AJ_AR']
@@ -534,25 +480,29 @@ for _, linha in jogos.iterrows():
     if not pd.isna(gols_ft):
         linha_aposta = gols_ft - 0.5
 
+        # Caso Over 1.5
         if linha_aposta == 1.5:
-            msgs.add("*Mais de 1.5 gols no jogo*")
+            msgs.append(f"*Mais de 1.5 gols no jogo*")
 
+        # Caso Over acima de 1.5
         elif linha_aposta > 1.5:
             protecao = linha_aposta - 1
-            msgs.add(
+
+            msgs.append(
                 f"*Mais de {linha_aposta} gols no jogo*\n"
                 f"_(Se mais que {linha_aposta} gols estiver com odd maior ou igual a 1.90, apostar {protecao} gols)_"
             )
 
+
+
     if not msgs:
         continue
-
-    msgs = list(msgs)
 
     hora = linha['Data/Hora'].strftime('%H:%M')
     dia = linha['Data/Hora'].strftime('%d/%m')
 
     msg = f"""
+    
 ⚽ *{linha['Div']}*
 🗓️ {dia}
 🕒 {hora}
@@ -560,38 +510,8 @@ for _, linha in jogos.iterrows():
 
 """ + "\n".join(msgs)
 
-    enviado = enviar_telegram(msg)
+    enviar_telegram(msg)
     time.sleep(1)
 
-    if not enviado:
-        print("⚠️ Falha ao enviar Telegram")
-        continue
-
-    for texto_tip in msgs:
-        registro = {
-            "Data": dia,
-            "Hora": hora,
-            "Campeonato": linha['Div'],
-            "Mandante": linha['Mandante'],
-            "Visitante": linha['Visitante'],
-            "Tipo_Tip": "Over Gols",
-            "Mensagem": texto_tip,
-            "Data_Envio": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-
-        chave = gerar_chave_jogo(registro)
-
-        if chave in jogos_enviados:
-            continue  # já enviado em execuções anteriores
-
-        salvar_tip_excel(registro)
-        novos_enviados.add(chave)
-
-
-
-salvar_jogos_enviados(jogos_enviados | novos_enviados)
-
-print("✅ Total enviados nesta execução:", len(novos_enviados))
-print("📁 Arquivo Excel:", ARQUIVO_JOGOS_GERADOS)
 
 print("✅ Script finalizado com sucesso")
