@@ -17,7 +17,10 @@ BASE_PAGE = "https://www.football-data.co.uk/matches_new_leagues.php"
 BASE_DIR = os.path.join(os.getcwd(), "base")
 os.makedirs(BASE_DIR, exist_ok=True)
 
-ARQUIVO_JOGOS_GERADOS = os.path.join(os.getcwd(), "JogosGerados.xlsx")
+DATA_HOJE = datetime.now().strftime("%Y%m%d")
+
+ARQUIVO_JOGOS_GERADOS = f"JogosGerados_{DATA_HOJE}.xlsx"
+ARQUIVO_CONTROLE = "jogos_enviados.csv"
 
 colunas_excel = [
     "Data",
@@ -370,6 +373,28 @@ def baixar_temp_main(destino_dir, qtd):
         with open(os.path.join(destino_dir, f"Temp{a1}{a2}.xlsx"), "wb") as f:
             f.write(requests.get(url).content)
 
+
+def carregar_jogos_enviados():
+    if os.path.exists(ARQUIVO_CONTROLE):
+        return set(pd.read_csv(ARQUIVO_CONTROLE)["chave"].tolist())
+    return set()
+
+
+def salvar_jogos_enviados(chaves):
+    pd.DataFrame({"chave": list(chaves)}).to_csv(
+        ARQUIVO_CONTROLE, index=False
+    )
+
+
+def gerar_chave_jogo(registro):
+    return (
+        f"{registro['Data']}_"
+        f"{registro['Hora']}_"
+        f"{registro['Mandante']}_"
+        f"{registro['Visitante']}_"
+        f"{registro['Tipo_Tip']}"
+    )
+
 ###################################
 # MAIN – DOWNLOAD
 ###################################
@@ -389,6 +414,8 @@ arquivos = glob.glob(os.path.join(BASE_DIR, "Jogos*.xlsx"))
 #if os.path.exists(arquivo_extra):
 #    arquivos.append(arquivo_extra)
 
+jogos_enviados = carregar_jogos_enviados()
+novos_enviados = set()
 
 lista = []
 
@@ -399,7 +426,7 @@ for arq in arquivos:
     lista.append(df)
     nome_arq = os.path.basename(arq)
     print(f"📄 Jogos carregados do arquivo {nome_arq}:")
-    print(df[['Div','Data','Hora','Mandante','Visitante']])
+
 
 jogos = pd.concat(lista).sort_values(['Data','Hora'])
 
@@ -553,13 +580,25 @@ for _, linha in jogos.iterrows():
                 "Data_Envio": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
     
-            salvar_tip_excel(registro)
+            chave = gerar_chave_jogo(registro)
+
+            if chave in jogos_enviados:
+                continue  # jogo já enviado anteriormente
+            
+            enviado = enviar_telegram(registro["Mensagem"])
+            
+            if enviado:
+                salvar_tip_excel(registro)
+                novos_enviados.add(chave)
 
 
     if not enviar_telegram(msg):
         print("⚠️ Falha ao enviar Telegram")
 
 
+salvar_jogos_enviados(jogos_enviados | novos_enviados)
 
+print("✅ Total enviados nesta execução:", len(novos_enviados))
+print("📁 Arquivo Excel:", ARQUIVO_JOGOS_GERADOS)
 
 print("✅ Script finalizado com sucesso")
