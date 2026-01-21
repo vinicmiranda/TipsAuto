@@ -306,14 +306,26 @@ def baixar_jogos_main(destino):
         requests.get("https://www.football-data.co.uk/matches.php").text,
         "html.parser"
     )
+
     link = soup.find("a", href=lambda x: x and "fixtures.xlsx" in x)
+    if not link:
+        print("❌ Link de fixtures não encontrado")
+        return
+
     url = BASE_SITE + link["href"]
 
-    df = pd.read_excel(requests.get(url).content)
+    response = requests.get(url)
+
+    with open(destino, "wb") as f:
+        f.write(response.content)
+
+    df = pd.read_excel(destino)
     df = df[['Div','Date','Time','HomeTeam','AwayTeam']]
     df.columns = ['Div','Data','Hora','Mandante','Visitante']
     df.to_excel(destino, index=False)
+
     print("📄 Jogos MAIN baixados:")
+
 
 
 def baixar_temp_extra(destino_dir):
