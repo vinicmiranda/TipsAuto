@@ -551,9 +551,14 @@ for _, linha in jogos.iterrows():
                 "Tipo_Tip": "Over Gols",
                 "Mensagem": texto_tip,
                 "Data_Envio": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
+            }
+    
+            salvar_tip_excel(registro)
 
-        salvar_tip_excel(registro)
+
+    if not enviar_telegram(msg):
+        print("⚠️ Falha ao enviar Telegram")
+
 
 
 
