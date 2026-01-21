@@ -17,6 +17,19 @@ BASE_PAGE = "https://www.football-data.co.uk/matches_new_leagues.php"
 BASE_DIR = os.path.join(os.getcwd(), "base")
 os.makedirs(BASE_DIR, exist_ok=True)
 
+ARQUIVO_JOGOS_GERADOS = os.path.join(os.getcwd(), "JogosGerados.xlsx")
+
+colunas_excel = [
+    "Data",
+    "Hora",
+    "Campeonato",
+    "Mandante",
+    "Visitante",
+    "Tipo_Tip",
+    "Mensagem",
+    "Data_Envio"
+]
+
 MAPA_DIV = {
     # INGLATERRA
     'E0': 'Premier League',
@@ -116,6 +129,20 @@ MAPA_DIV = {
 ###################################
 # TELEGRAM
 ###################################
+
+def salvar_tip_excel(registro):
+    """
+    registro: dict com as colunas definidas em colunas_excel
+    """
+    novo_df = pd.DataFrame([registro])
+
+    if os.path.exists(ARQUIVO_JOGOS_GERADOS):
+        df_existente = pd.read_excel(ARQUIVO_JOGOS_GERADOS)
+        df_final = pd.concat([df_existente, novo_df], ignore_index=True)
+    else:
+        df_final = novo_df
+
+    df_final.to_excel(ARQUIVO_JOGOS_GERADOS, index=False)
 
 def enviar_telegram(mensagem):
     TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -510,8 +537,24 @@ for _, linha in jogos.iterrows():
 
 """ + "\n".join(msgs)
 
-    enviar_telegram(msg)
+    enviado = enviar_telegram(msg)
     time.sleep(1)
+    
+    if enviado:
+        for texto_tip in msgs:
+            registro = {
+                "Data": dia,
+                "Hora": hora,
+                "Campeonato": linha['Div'],
+                "Mandante": linha['Mandante'],
+                "Visitante": linha['Visitante'],
+                "Tipo_Tip": "Over Gols",
+                "Mensagem": texto_tip,
+                "Data_Envio": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        salvar_tip_excel(registro)
+
 
 
 print("✅ Script finalizado com sucesso")
