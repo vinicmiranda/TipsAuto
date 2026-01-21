@@ -518,15 +518,15 @@ jogos['Gols_FT_AJ_AR'] = jogos['Gols_FT_AJ'].apply(arredondar_gols)
 
 for _, linha in jogos.iterrows():
 
-    msgs = []
+    msgs = set()
 
     # -------- PRIMEIRO TEMPO --------
-    #gols_ht = linha['Gols_HT_AJ']
-    #if not pd.isna(gols_ht) and gols_ht >= 0.60:
-    #    if gols_ht >= 0.90:
-    #        msgs.append("Mais de *1* gol no **Primeiro tempo**")
-    #    else:
-    #        msgs.append("Mais de *0.5* gol no **Primeiro tempo**")
+    # gols_ht = linha['Gols_HT_AJ']
+    # if not pd.isna(gols_ht) and gols_ht >= 0.60:
+    #     if gols_ht >= 0.90:
+    #         msgs.add("Mais de *1* gol no **Primeiro tempo**")
+    #     else:
+    #         msgs.add("Mais de *0.5* gol no **Primeiro tempo**")
 
     # -------- JOGO TODO (COM GESTÃO) --------
     gols_ft = linha['Gols_FT_AJ_AR']
@@ -534,29 +534,25 @@ for _, linha in jogos.iterrows():
     if not pd.isna(gols_ft):
         linha_aposta = gols_ft - 0.5
 
-        # Caso Over 1.5
         if linha_aposta == 1.5:
-            msgs.append(f"*Mais de 1.5 gols no jogo*")
+            msgs.add("*Mais de 1.5 gols no jogo*")
 
-        # Caso Over acima de 1.5
         elif linha_aposta > 1.5:
             protecao = linha_aposta - 1
-
-            msgs.append(
+            msgs.add(
                 f"*Mais de {linha_aposta} gols no jogo*\n"
                 f"_(Se mais que {linha_aposta} gols estiver com odd maior ou igual a 1.90, apostar {protecao} gols)_"
             )
 
-
-
     if not msgs:
         continue
+
+    msgs = list(msgs)
 
     hora = linha['Data/Hora'].strftime('%H:%M')
     dia = linha['Data/Hora'].strftime('%d/%m')
 
     msg = f"""
-    
 ⚽ *{linha['Div']}*
 🗓️ {dia}
 🕒 {hora}
@@ -566,34 +562,31 @@ for _, linha in jogos.iterrows():
 
     enviado = enviar_telegram(msg)
     time.sleep(1)
-    
-    if enviado:
-        for texto_tip in msgs:
-            registro = {
-                "Data": dia,
-                "Hora": hora,
-                "Campeonato": linha['Div'],
-                "Mandante": linha['Mandante'],
-                "Visitante": linha['Visitante'],
-                "Tipo_Tip": "Over Gols",
-                "Mensagem": texto_tip,
-                "Data_Envio": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }
-    
-            chave = gerar_chave_jogo(registro)
 
-            if chave in jogos_enviados:
-                continue  # jogo já enviado anteriormente
-            
-            enviado = enviar_telegram(registro["Mensagem"])
-            
-            if enviado:
-                salvar_tip_excel(registro)
-                novos_enviados.add(chave)
-
-
-    if not enviar_telegram(msg):
+    if not enviado:
         print("⚠️ Falha ao enviar Telegram")
+        continue
+
+    for texto_tip in msgs:
+        registro = {
+            "Data": dia,
+            "Hora": hora,
+            "Campeonato": linha['Div'],
+            "Mandante": linha['Mandante'],
+            "Visitante": linha['Visitante'],
+            "Tipo_Tip": "Over Gols",
+            "Mensagem": texto_tip,
+            "Data_Envio": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        chave = gerar_chave_jogo(registro)
+
+        if chave in jogos_enviados:
+            continue  # já enviado em execuções anteriores
+
+        salvar_tip_excel(registro)
+        novos_enviados.add(chave)
+
 
 
 salvar_jogos_enviados(jogos_enviados | novos_enviados)
