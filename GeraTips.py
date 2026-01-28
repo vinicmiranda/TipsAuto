@@ -383,8 +383,6 @@ for arq in arquivos:
     df['Hora'] = df['Hora'].astype(str).str[:5]
     lista.append(df)
     nome_arq = os.path.basename(arq)
-    print(f"📄 Jogos carregados do arquivo {nome_arq}:")
-    print(df[['Div','Data','Hora','Mandante','Visitante']])
 
 jogos = pd.concat(lista).sort_values(['Data','Hora'])
 
@@ -452,12 +450,28 @@ jogos = jogos[
     (jogos['Data/Hora'] <= limite_up)
 ]
 
+print("\n🧪 LOG 1 — Jogos após filtro de horário")
+for _, j in jogos.iterrows():
+    print(f"{j['Mandante']} x {j['Visitante']} | {j['Data/Hora']}")
+
 clubs = Clubs.set_index('Time')
 
 gmhtc_m = clubs.reindex(jogos['Mandante'])['GMHTC'].values
 gshtf_v = clubs.reindex(jogos['Visitante'])['GSHTF'].values
 
 jogos['Gols_HT_AJ'] = (gmhtc_m + gshtf_v) / 2
+
+print("\n🧪 LOG 2 — Métricas por clube")
+for _, j in jogos.iterrows():
+    mand = j['Mandante']
+    vis  = j['Visitante']
+
+    print(f"\n{mand} x {vis}")
+    print(" Mandante:")
+    print(clubs.loc[mand] if mand in clubs.index else "❌ Não encontrado")
+
+    print(" Visitante:")
+    print(clubs.loc[vis] if vis in clubs.index else "❌ Não encontrado")
 
 gmc_m = clubs.reindex(jogos['Mandante'])['GMC'].values
 gsf_v = clubs.reindex(jogos['Visitante'])['GSF'].values
@@ -470,45 +484,59 @@ jogos['Gols_FT_AJ'] = (
     (gmf10_v + gsc10_m) / 2
 )
 
+print("\n🧪 LOG 3 — Cálculo de gols")
+for _, j in jogos.iterrows():
+    print(
+        f"{j['Mandante']} x {j['Visitante']} | "
+        f"Gols_FT_AJ: {j['Gols_FT_AJ']}"
+    )
+
 jogos['Gols_FT_AJ_AR'] = jogos['Gols_FT_AJ'].apply(arredondar_gols)
 
 
+print("\n🧪 LOG 4 — Arredondamento")
+for _, j in jogos.iterrows():
+    print(
+        f"{j['Mandante']} x {j['Visitante']} | "
+        f"AJ: {j['Gols_FT_AJ']} → AR: {j['Gols_FT_AJ_AR']}"
+    )
+
 for _, linha in jogos.iterrows():
+
+    print(
+        f"\n🧪 LOG 5 — Avaliando jogo: "
+        f"{linha['Mandante']} x {linha['Visitante']}"
+    )
 
     msgs = []
 
-    # -------- PRIMEIRO TEMPO --------
-    #gols_ht = linha['Gols_HT_AJ']
-    #if not pd.isna(gols_ht) and gols_ht >= 0.60:
-    #    if gols_ht >= 0.90:
-    #        msgs.append("Mais de *1* gol no **Primeiro tempo**")
-    #    else:
-    #        msgs.append("Mais de *0.5* gol no **Primeiro tempo**")
-
-    # -------- JOGO TODO (COM GESTÃO) --------
     gols_ft = linha['Gols_FT_AJ_AR']
+    print(f"   Gols_FT_AJ_AR = {gols_ft}")
 
     if not pd.isna(gols_ft):
         linha_aposta = gols_ft - 0.5
+        print(f"   Linha calculada = {linha_aposta}")
 
-        # Caso Over 1.5
         if linha_aposta == 1.5:
-            msgs.append(f"*Mais de 1.5 gols no jogo*")
+            print("   👉 Condição: Over 1.5")
+            msgs.append("*Mais de 1.5 gols no jogo*")
 
-        # Caso Over acima de 1.5
         elif linha_aposta > 1.5:
             protecao = linha_aposta - 1
-
+            print(f"   👉 Condição: Over {linha_aposta}")
             msgs.append(
                 f"*Mais de {linha_aposta} gols no jogo*\n"
                 f"_(Se mais que {linha_aposta} gols estiver com odd maior ou igual a 1.90, apostar {protecao} gols)_"
             )
-
-
+    else:
+        print("   ❌ Gols_FT_AJ_AR é NaN")
 
     if not msgs:
+        print("   ❌ Nenhuma tip gerada para este jogo")
         continue
 
+    print("   ✅ TIP GERADA:", msgs)
+    
     hora = linha['Data/Hora'].strftime('%H:%M')
     dia = linha['Data/Hora'].strftime('%d/%m')
 
