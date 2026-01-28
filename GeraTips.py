@@ -501,6 +501,8 @@ for _, j in jogos.iterrows():
         f"AJ: {j['Gols_FT_AJ']} → AR: {j['Gols_FT_AJ_AR']}"
     )
 
+mensagens_telegram = []
+
 for _, linha in jogos.iterrows():
 
     print(
@@ -536,20 +538,31 @@ for _, linha in jogos.iterrows():
         continue
 
     print("   ✅ TIP GERADA:", msgs)
-    
+
     hora = linha['Data/Hora'].strftime('%H:%M')
     dia = linha['Data/Hora'].strftime('%d/%m')
 
     msg = (
-    f"⚽ {linha['Div']}\n"
-    f"🗓️ {dia}\n"
-    f"🕒 {hora}\n"
-    f"{linha['Mandante']} x {linha['Visitante']}\n\n"
-    + "\n".join(msgs)
-)
+        f"⚽ {linha['Div']}\n"
+        f"🗓️ {dia}\n"
+        f"🕒 {hora}\n"
+        f"{linha['Mandante']} x {linha['Visitante']}\n\n"
+        + "\n".join(msgs)
+    )
 
-    enviar_telegram(msg)
-    time.sleep(1)
+    mensagens_telegram.append(msg)
 
+# 🔽 FORA do loop
+if mensagens_telegram:
+    cabecalho = (
+        "📊 *BOLETIM DE TIPS*\n"
+        f"🗓️ {datetime.now().strftime('%d/%m')}\n\n"
+    )
+
+    separador = "\n\n" + "—" * 12 + "\n\n"
+    texto_final = cabecalho + separador.join(mensagens_telegram)
+
+    enviar_telegram(texto_final)
 
 print("✅ Script finalizado com sucesso")
+
