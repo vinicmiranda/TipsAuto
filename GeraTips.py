@@ -128,8 +128,8 @@ def enviar_telegram(mensagem):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
-        "text": mensagem,
-        "parse_mode": "Markdown"
+        "text": mensagem
+        #,"parse_mode": "Markdown"
     }
 
     r = requests.post(url, json=payload)
