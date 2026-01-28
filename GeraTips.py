@@ -454,21 +454,20 @@ jogos = jogos[
 
 clubs = Clubs.set_index('Time')
 
-jogos['Gols_HT_AJ'] = (
-    clubs.loc[jogos['Mandante'], 'GMHTC'].values +
-    clubs.loc[jogos['Visitante'], 'GSHTF'].values
-) / 2
+gmhtc_m = clubs.reindex(jogos['Mandante'])['GMHTC'].values
+gshtf_v = clubs.reindex(jogos['Visitante'])['GSHTF'].values
+
+jogos['Gols_HT_AJ'] = (gmhtc_m + gshtf_v) / 2
+
+gmc_m = clubs.reindex(jogos['Mandante'])['GMC'].values
+gsf_v = clubs.reindex(jogos['Visitante'])['GSF'].values
+
+gmf10_v = clubs.reindex(jogos['Visitante'])['GMF10'].values
+gsc10_m = clubs.reindex(jogos['Mandante'])['GSC10'].values
 
 jogos['Gols_FT_AJ'] = (
-    (
-        clubs.loc[jogos['Mandante'], 'GMC'].values +
-        clubs.loc[jogos['Visitante'], 'GSF'].values
-    ) / 2
-    +
-    (
-        clubs.loc[jogos['Visitante'], 'GMF10'].values +
-        clubs.loc[jogos['Mandante'], 'GSC10'].values
-    ) / 2
+    (gmc_m + gsf_v) / 2 +
+    (gmf10_v + gsc10_m) / 2
 )
 
 jogos['Gols_FT_AJ_AR'] = jogos['Gols_FT_AJ'].apply(arredondar_gols)
