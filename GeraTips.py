@@ -129,7 +129,7 @@ def enviar_telegram(mensagem):
     payload = {
         "chat_id": CHAT_ID,
         "text": mensagem
-        #,"parse_mode": "Markdown"
+        ,"parse_mode": "Markdown"
     }
 
     r = requests.post(url, json=payload)
@@ -540,14 +540,13 @@ for _, linha in jogos.iterrows():
     hora = linha['Data/Hora'].strftime('%H:%M')
     dia = linha['Data/Hora'].strftime('%d/%m')
 
-    msg = f"""
-    
-⚽ *{linha['Div']}*
-🗓️ {dia}
-🕒 {hora}
-{linha['Mandante']} x {linha['Visitante']}
-
-""" + "\n".join(msgs)
+    msg = (
+    f"⚽ {linha['Div']}\n"
+    f"🗓️ {dia}\n"
+    f"🕒 {hora}\n"
+    f"{linha['Mandante']} x {linha['Visitante']}\n\n"
+    + "\n".join(msgs)
+)
 
     enviar_telegram(msg)
     time.sleep(1)
