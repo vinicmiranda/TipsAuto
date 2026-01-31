@@ -355,6 +355,10 @@ def baixar_temp_main(destino_dir, qtd):
         with open(os.path.join(destino_dir, f"Temp{a1}{a2}.xlsx"), "wb") as f:
             f.write(requests.get(url).content)
 
+def dividir_em_blocos(lista, tamanho=10):
+    for i in range(0, len(lista), tamanho):
+        yield lista[i:i + tamanho]
+
 ###################################
 # MAIN – DOWNLOAD
 ###################################
@@ -554,15 +558,26 @@ for _, linha in jogos.iterrows():
 
 # 🔽 FORA do loop
 if mensagens_telegram:
-    cabecalho = (
-        "📊 *BOLETIM DE TIPS*\n"
-        f"🗓️ {datetime.now().strftime('%d/%m')}\n\n"
-    )
+    blocos = list(dividir_em_blocos(mensagens_telegram, 10))
 
-    separador = "\n\n" + "—" * 12 + "\n\n"
-    texto_final = cabecalho + separador.join(mensagens_telegram)
+    for i, bloco in enumerate(blocos, start=1):
+        cabecalho = (
+            "📊 *BOLETIM DE TIPS*\n"
+            f"🗓️ {datetime.now().strftime('%d/%m')}\n"
+            f"📦 Bloco {i}/{len(blocos)}\n\n"
+        )
 
-    enviar_telegram(texto_final)
+        separador = "\n\n" + "—" * 12 + "\n\n"
+        texto = cabecalho + separador.join(bloco)
+
+        enviado = enviar_telegram(texto)
+
+        if enviado:
+            print(f"📤 Telegram enviado: bloco {i}")
+        else:
+            print(f"❌ Falha ao enviar bloco {i}")
+
+        time.sleep(1)  # evita rate limit
 
 print("✅ Script finalizado com sucesso")
 
