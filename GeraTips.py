@@ -442,7 +442,10 @@ Clubs['GMF10'] = Clubs['Time'].apply(calcular_gmf10)
 
 jogos['Hora'] = pd.to_datetime(jogos['Hora'], format='%H:%M', errors='coerce').dt.time
 jogos['Data/Hora'] = jogos.apply(
-    lambda x: pd.Timestamp.combine(x['Data'].date(), x['Hora']), axis=1
+    lambda x: pd.Timestamp.combine(x['Data'].date(), x['Hora'])
+    if pd.notna(x['Hora']) and pd.notna(x['Data'])
+    else pd.NaT,
+    axis=1
 ) - pd.Timedelta(hours=3)
 
 agora = pd.Timestamp.now()
