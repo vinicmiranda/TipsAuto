@@ -446,7 +446,7 @@ jogos['Data/Hora'] = jogos.apply(
     if pd.notna(x['Hora']) and pd.notna(x['Data'])
     else pd.NaT,
     axis=1
-) - pd.Timedelta(hours=2)
+) - pd.Timedelta(hours=4)
 
 agora = pd.Timestamp.now()
 limite_up = agora + pd.Timedelta(hours=12)
